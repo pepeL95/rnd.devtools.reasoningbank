@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reasoningbank"
+version = "0.1.0"
+description = "Local-first markdown-native ReasoningBank memory system"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "chromadb>=1.5.5",
+  "langchain>=1.2",
+  "langchain-google-genai>=4.0",
+  "PyYAML>=6.0",
+  "pydantic>=2.0",
+]
+
+[project.scripts]
+reasoningbank = "cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "backend"}
+py-modules = [
+  "artifacts",
+  "cli",
+  "gate",
+  "graph",
+  "investigator",
+  "llm",
+  "models",
+  "reader",
+  "retriever",
+  "store",
+  "synthesizer",
+  "vector",
+]

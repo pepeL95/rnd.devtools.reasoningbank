@@ -7,7 +7,7 @@ name = "reasoningbank"
 version = "0.1.0"
 description = "Local-first markdown-native ReasoningBank memory system"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
   "chromadb>=1.5.5",
   "langchain>=1.2",

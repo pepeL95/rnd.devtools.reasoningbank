@@ -20,7 +20,7 @@ Use Python for the implementation.
 Recommended baseline:
 
 ```text
-Python 3.11+
+Python 3.12+
 ```
 
 Useful libraries:

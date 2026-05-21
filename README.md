@@ -12,10 +12,48 @@ The implementation follows the specs in `docs/specs/`:
 - Chroma is the vector store.
 - LangChain Gemini is the LLM and embedding integration.
 
+## Python Version
+
+This repo is maintained against Python `3.12`.
+
+- Package metadata requires `>=3.12`.
+- Local smoke coverage in this repo has been run against Python `3.12`.
+- `3.12` is the conservative default for dependency compatibility and long-term maintenance.
+
+Using a newer interpreter may work, but `3.12` is the supported baseline unless the repo is explicitly revalidated and upgraded.
+
+## Conda Bootstrap
+
+The repo includes a reproducible Conda environment for developers.
+
+One-command setup:
+
+```bash
+bash scripts/setup_conda_env.sh
+```
+
+That script will:
+
+- create the `reasoningbank` Conda env if it does not exist
+- update it in place if it already exists
+- install the repo in editable mode via `-e .`
+
+The underlying env definition lives in [environment.yml](/Users/pepelopez/Documents/Programming/rnd.reasoningbank/environment.yml). If you want a different env name, pass it as the first argument:
+
+```bash
+bash scripts/setup_conda_env.sh reasoningbank-dev
+```
+
+After setup:
+
+```bash
+conda activate reasoningbank
+```
+
 ## Smoke Test
 
 ```bash
-python3 scripts/smoke_reasoningbank.py
+python scripts/smoke_reasoningbank.py
 ```
 
 This creates a temporary Chroma + SQLite memory store, synthesizes a candidate, confirms candidate leakage is blocked, approves the memory through the gate, retrieves it, activates its body, and refreshes graph edges. The smoke test uses a local test embedding object so it does not consume a Gemini API key; the CLI/runtime path uses LangChain Gemini embeddings.
@@ -24,7 +62,7 @@ For a live Gemini-backed smoke test:
 
 ```bash
 export GOOGLE_API_KEY="..."
-/opt/homebrew/Caskroom/miniforge/base/envs/reasoningbank/bin/python scripts/live_gemini_smoke.py
+python scripts/live_gemini_smoke.py
 ```
 
 ## Gemini Credentials

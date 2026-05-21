@@ -6,5 +6,6 @@ __pycache__/
 .env.*
 !.env.example
 .smoke_reasoningbank/
+.smoke_cli_init_config/
 .live_gemini_smoke/
 .reasoningbank/

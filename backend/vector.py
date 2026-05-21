@@ -10,7 +10,7 @@ class ChromaMemoryIndex:
     def __init__(
         self,
         path: str,
-        embeddings: GoogleGenerativeAIEmbeddings,
+        embeddings: Optional[GoogleGenerativeAIEmbeddings],
         collection_name: str = "reasoningbank_memories",
     ) -> None:
         self.embeddings = embeddings
@@ -21,6 +21,8 @@ class ChromaMemoryIndex:
         )
 
     def upsert(self, memory_id: str, text: str, metadata: Dict[str, Any]) -> None:
+        if self.embeddings is None:
+            raise RuntimeError("embeddings are required for indexing")
         vector = self.embeddings.embed_documents([text])[0]
         self.collection.upsert(
             ids=[memory_id],
@@ -35,6 +37,8 @@ class ChromaMemoryIndex:
         limit: int = 5,
         where: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
+        if self.embeddings is None:
+            raise RuntimeError("embeddings are required for retrieval")
         vector = self.embeddings.embed_query(text)
         result = self.collection.query(
             query_embeddings=[vector],

@@ -94,7 +94,7 @@ class SQLiteMemoryStore:
     def create_candidate_memory(self, memory: SynthesizedMemory) -> MemoryRecord:
         artifact_path = Path(memory.markdown_path)
         if not artifact_path.is_absolute():
-            artifact_path = self.root / artifact_path
+            artifact_path = artifact_path.resolve()
         artifact_path.parent.mkdir(parents=True, exist_ok=True)
         artifact_text = render_markdown(
             memory.name,
@@ -106,14 +106,14 @@ class SQLiteMemoryStore:
         artifact_path.write_text(artifact_text, encoding="utf-8")
         parsed = parse_markdown_file(artifact_path)
         now = utcnow()
-        relative_path = str(artifact_path.relative_to(self.root))
-        memory_id = memory_id_for_path(relative_path)
+        stored_path = str(artifact_path)
+        memory_id = memory_id_for_path(stored_path)
         record = MemoryRecord(
             id=memory_id,
             repo=memory.repo,
             scope="local",
             status="candidate",
-            markdown_path=relative_path,
+            markdown_path=stored_path,
             name=str(parsed.frontmatter["name"]),
             description=str(parsed.frontmatter["description"]),
             trigger=parsed.frontmatter["trigger"],
@@ -148,16 +148,16 @@ class SQLiteMemoryStore:
             raise ValueError("invalid scope: %s" % scope)
         artifact_path = Path(path)
         if not artifact_path.is_absolute():
-            artifact_path = self.root / artifact_path
+            artifact_path = artifact_path.resolve()
         parsed = parse_markdown_file(artifact_path)
         now = utcnow()
-        relative_path = str(artifact_path.relative_to(self.root))
+        stored_path = str(artifact_path)
         record = MemoryRecord(
-            id=memory_id_for_path(relative_path),
+            id=memory_id_for_path(stored_path),
             repo=repo,
             scope=scope,  # type: ignore[arg-type]
             status=status,  # type: ignore[arg-type]
-            markdown_path=relative_path,
+            markdown_path=stored_path,
             name=str(parsed.frontmatter["name"]),
             description=str(parsed.frontmatter["description"]),
             trigger=parsed.frontmatter["trigger"],
@@ -167,7 +167,7 @@ class SQLiteMemoryStore:
             commit_refs=[],
             pr_refs=[],
             body_hash=body_hash(parsed.body),
-            embedding_id=memory_id_for_path(relative_path),
+            embedding_id=memory_id_for_path(stored_path),
             created_at=now,
             updated_at=now,
             reviewed_at=now if status != "candidate" else None,
@@ -186,7 +186,7 @@ class SQLiteMemoryStore:
 
     def get_memory_body(self, memory_id: str) -> str:
         record = self.get_memory(memory_id)
-        parsed = parse_markdown_file(self.root / record.markdown_path)
+        parsed = parse_markdown_file(self._artifact_path(record.markdown_path))
         return parsed.body
 
     def list_memories(
@@ -353,6 +353,12 @@ class SQLiteMemoryStore:
                 "tags": ",".join(record.tags),
             },
         )
+
+    def _artifact_path(self, stored_path: str) -> Path:
+        path = Path(stored_path)
+        if path.is_absolute():
+            return path
+        return self.root / path
 
     def _row_to_record(self, row: sqlite3.Row) -> MemoryRecord:
         return MemoryRecord(

@@ -24,6 +24,7 @@ package-dir = {"" = "backend"}
 py-modules = [
   "artifacts",
   "cli",
+  "config",
   "gate",
   "graph",
   "investigator",

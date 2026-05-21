@@ -78,8 +78,19 @@ def discover_config(start: Path) -> Optional[ReasoningBankConfig]:
     return None
 
 
-def resolve_settings(start: Path, root_override: Optional[str], repo_override: Optional[str]) -> EffectiveSettings:
+def resolve_settings(
+    start: Path,
+    root_override: Optional[str],
+    repo_override: Optional[str],
+    require_config: bool = True,
+) -> EffectiveSettings:
     config = discover_config(start)
+    if config is None and require_config and (root_override is None or repo_override is None):
+        raise RuntimeError(
+            "no .reasoningbankconfig found; run `reasoningbank init` or `reasoningbank config` first, "
+            "or pass both --root and --repo explicitly"
+        )
+
     if root_override:
         root = Path(root_override).expanduser()
         if not root.is_absolute():
@@ -105,6 +116,10 @@ def resolve_settings(start: Path, root_override: Optional[str], repo_override: O
     )
 
 
+def default_local_config_values(start: Path) -> tuple[str, str]:
+    return ".reasoningbank", str(start.resolve())
+
+
 def write_config(path: Path, root: str, repo_path: str) -> None:
     payload: Dict[str, Any] = {
         "root": root,
@@ -112,4 +127,3 @@ def write_config(path: Path, root: str, repo_path: str) -> None:
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
-

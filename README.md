@@ -41,7 +41,7 @@ For local development, an ignored `.env` file may also be used by your shell too
 
 The CLI now has eight main commands. Two commands manage local setup and default resolution; the rest operate on the memory lifecycle:
 
-- `init`: bootstrap a `.reasoningbank/` store in the current working directory.
+- `init`: bootstrap a `.reasoningbank/` store in the current working directory and create a coupled local `.reasoningbankconfig`.
 - `config`: inspect or write `.reasoningbankconfig` defaults for `root` and `repo_path`. Resolution walks upward from the current directory to `/`, then falls back to `~/.reasoningbankconfig`.
 - `validate`: check markdown artifacts for frontmatter/body contract issues without indexing them.
 - `index`: ingest one validated markdown artifact into SQLite and Chroma with repo/status/scope metadata.
@@ -58,8 +58,7 @@ If you do not pass `--root` or `--repo`, the CLI resolves defaults in this order
 
 1. The nearest `.reasoningbankconfig` in the current directory or one of its parents.
 2. `~/.reasoningbankconfig`.
-3. Built-in fallback:
-   `root = <cwd>/.reasoningbank`
-   `repo_path = <cwd>`
+
+If no config is found, store-backed commands do not invent implicit defaults from `cwd`; they ask you to run `reasoningbank init` or `reasoningbank config`, or to pass both `--root` and `--repo` explicitly.
 
 `repo_path` is stored as a path, and the effective repo name is inferred from its basename.

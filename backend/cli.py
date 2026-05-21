@@ -6,6 +6,7 @@ from pathlib import Path
 
 from config import (
     config_path_for,
+    default_local_config_values,
     discover_config,
     global_config_path,
     resolve_settings,
@@ -41,8 +42,14 @@ def effective_settings(args: argparse.Namespace) -> object:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
-    root = (Path.cwd() / ".reasoningbank").resolve()
+    cwd = Path.cwd()
+    local_root, local_repo_path = default_local_config_values(cwd)
+    root = (cwd / local_root).resolve()
     bootstrap_store(root)
+    config_path = config_path_for(cwd)
+    if not config_path.exists():
+        write_config(config_path, root=local_root, repo_path=local_repo_path)
+        print("wrote %s" % config_path)
     print("initialized %s" % root)
     return 0
 
@@ -57,19 +64,20 @@ def config_target_path(use_global: bool) -> Path:
 
 
 def interactive_config(args: argparse.Namespace) -> int:
-    current = resolve_settings(Path.cwd(), None, None)
+    cwd = Path.cwd()
     existing = discover_config(Path.cwd())
     target_default = "global" if existing and existing.path == global_config_path() else "local"
     scope = input("Config scope [local/global] (%s): " % target_default).strip().lower() or target_default
     use_global = scope == "global"
     target = config_target_path(use_global)
+    local_root, local_repo_path = default_local_config_values(cwd)
     default_root = (
-        str(existing.root) if existing and existing.path == target and existing.root else ".reasoningbank"
+        str(existing.root) if existing and existing.path == target and existing.root else local_root
     )
     default_repo_path = (
         str(existing.repo_path)
         if existing and existing.path == target and existing.repo_path
-        else str(current.repo_path)
+        else local_repo_path
     )
     root_value = input("Root path [%s]: " % default_root).strip() or default_root
     repo_path_value = input("Repo path [%s]: " % default_repo_path).strip() or default_repo_path
@@ -83,8 +91,16 @@ def cmd_config(args: argparse.Namespace) -> int:
         return interactive_config(args)
 
     if args.show:
-        current = resolve_settings(Path.cwd(), None, None)
-        print("source: %s" % (current.source or "<default>"))
+        existing = discover_config(Path.cwd())
+        if existing is None:
+            print("source: <none>")
+            print("root: <unset>")
+            print("repo_path: <unset>")
+            print("repo_name: <unset>")
+            print("hint: run `reasoningbank init` or `reasoningbank config` to create a local default")
+            return 0
+        current = resolve_settings(Path.cwd(), None, None, require_config=False)
+        print("source: %s" % current.source)
         print("root: %s" % current.root)
         print("repo_path: %s" % current.repo_path)
         print("repo_name: %s" % current.repo_name)
@@ -94,16 +110,17 @@ def cmd_config(args: argparse.Namespace) -> int:
     existing = discover_config(Path.cwd())
     root_value = args.root
     repo_path_value = args.repo_path
+    local_root, local_repo_path = default_local_config_values(Path.cwd())
     if existing and existing.path == target:
         if root_value is None:
-            root_value = existing.root or ".reasoningbank"
+            root_value = existing.root or local_root
         if repo_path_value is None:
-            repo_path_value = existing.repo_path or str(Path.cwd())
+            repo_path_value = existing.repo_path or local_repo_path
     else:
         if root_value is None:
-            root_value = ".reasoningbank"
+            root_value = local_root
         if repo_path_value is None:
-            repo_path_value = str(Path.cwd())
+            repo_path_value = local_repo_path
     write_config(target, root=root_value, repo_path=repo_path_value)
     print("wrote %s" % target)
     return 0
@@ -202,7 +219,7 @@ def parser() -> argparse.ArgumentParser:
         ),
         epilog=(
             "Core flow:\n"
-            "  1. init a local store, then configure defaults if you want path discovery\n"
+            "  1. init a local store, which also writes a local .reasoningbankconfig\n"
             "  2. validate or index artifacts into the local store\n"
             "  3. retrieve previews for a repo task\n"
             "  4. read a memory body only when it is relevant\n"
@@ -227,7 +244,8 @@ def parser() -> argparse.ArgumentParser:
         help="Bootstrap a .reasoningbank store in the current working directory.",
         description=(
             "Create a store rooted at ./ .reasoningbank in the current working directory, "
-            "including SQLite state and a persistent Chroma directory."
+            "including SQLite state, a persistent Chroma directory, and a coupled "
+            "local .reasoningbankconfig."
         ),
         epilog=(
             "Example:\n"
@@ -242,7 +260,8 @@ def parser() -> argparse.ArgumentParser:
         help="Set or inspect hierarchical defaults for root and repo path.",
         description=(
             "Read or write .reasoningbankconfig files. Resolution walks upward from "
-            "the current directory to the filesystem root, then falls back to ~/.reasoningbankconfig."
+            "the current directory to the filesystem root, then falls back to ~/.reasoningbankconfig. "
+            "Store-backed commands take their default root and repo path from the nearest discovered config."
         ),
         epilog=(
             "Examples:\n"
@@ -457,7 +476,11 @@ def parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = parser().parse_args()
-    return args.func(args)
+    try:
+        return args.func(args)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

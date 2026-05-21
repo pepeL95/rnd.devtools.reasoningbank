@@ -34,16 +34,6 @@ def main() -> int:
     assert "initialized" in init_result.stdout
     assert (repo_root / ".reasoningbank").is_dir()
     assert (repo_root / ".reasoningbank" / "reasoningbank.sqlite3").exists()
-
-    config_result = run(
-        "config",
-        "--root",
-        ".reasoningbank",
-        "--repo-path",
-        str(repo_root),
-        cwd=repo_root,
-    )
-    assert "wrote" in config_result.stdout
     assert (repo_root / ".reasoningbankconfig").exists()
 
     show_result = run("config", "--show", cwd=workspace)
@@ -51,6 +41,17 @@ def main() -> int:
     assert str((repo_root / ".reasoningbank").resolve()) in output
     assert str(repo_root.resolve()) in output
     assert "repo_name: repo" in output
+
+    other_workspace = sandbox / "other"
+    other_workspace.mkdir()
+    missing_config = subprocess.run(
+        [PYTHON, str(BACKEND / "cli.py"), "retrieve", "--task", "anything"],
+        cwd=str(other_workspace),
+        capture_output=True,
+        text=True,
+    )
+    assert missing_config.returncode != 0
+    assert "run `reasoningbank init` or `reasoningbank config` first" in missing_config.stderr
 
     print("cli init/config smoke ok")
     return 0
